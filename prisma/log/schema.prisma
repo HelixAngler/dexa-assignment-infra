@@ -1,0 +1,32 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL_LOG")
+}
+
+generator notification_client {
+  provider = "prisma-client-js"
+  output   = "../../../notification-service/src/generated/prisma-log"
+}
+
+enum EmployeeRole {
+  employee
+  hrd
+}
+
+/// Append-only consumer-written archive of profile changes (one row per event).
+model ProfileChangeLog {
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId       String       @unique @map("event_id") @db.Uuid
+  employeeId    String       @map("employee_id") @db.Uuid
+  employeeEmail String       @map("employee_email")
+  employeeName  String       @map("employee_name")
+  actorId       String       @map("actor_id") @db.Uuid
+  actorRole     EmployeeRole @map("actor_role")
+  changedFields String[]     @map("changed_fields")
+  beforeValues  Json?        @map("before_values")
+  afterValues   Json?        @map("after_values")
+  occurredAt    DateTime     @map("occurred_at") @db.Timestamptz()
+  ingestedAt    DateTime     @default(now()) @map("ingested_at") @db.Timestamptz()
+
+  @@map("profile_change_log")
+}

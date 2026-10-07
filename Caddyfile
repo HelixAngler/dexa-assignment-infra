@@ -1,0 +1,59 @@
+# Local edge proxy for the whole stack.
+#
+# Certificates come from Caddy's internal CA (`tls internal`), so no account
+# email or public ACME endpoint is involved. Plain HTTP on :80 and HTTPS on
+# :443 both serve the application routes.
+
+{
+	# Keep the :80 listener as a plain application entry point instead of
+	# turning it into an automatic redirect to HTTPS.
+	auto_https disable_redirects
+}
+
+# Shared routing table. Imported by both listeners so :80 and :443 behave
+# identically; Caddy upgrades WebSockets on its own for reverse_proxy.
+(apps) {
+	# NestJS global prefix already includes "api/identity", so the request
+	# path is forwarded unchanged.
+	handle /api/identity/* {
+		reverse_proxy identity-service:3001
+	}
+
+	# Attendance routes keep their full "api/attendance" prefix as well.
+	handle /api/attendance/* {
+		reverse_proxy attendance-service:3002
+	}
+
+	# Notification routes keep their full "api/notification" prefix.
+	handle /api/notification/* {
+		reverse_proxy notification-service:3003
+	}
+
+	# Centrifugo realtime endpoint. WebSockets upgrade automatically inside
+	# reverse_proxy; forwarding the original Host is the Caddy 2 spelling of
+	# the header_upstream Host behavior.
+	handle /realtime* {
+		reverse_proxy centrifugo:8000 {
+			header_up Host {host}
+		}
+	}
+
+	# HRD console is mounted under the /hrd prefix; paths pass through as-is.
+	handle /hrd* {
+		reverse_proxy hrd-web:8082
+	}
+
+	# Employee console catches everything else.
+	handle / {
+		reverse_proxy employee-web:8081
+	}
+}
+
+http://:80 {
+	import apps
+}
+
+:443 {
+	tls internal
+	import apps
+}

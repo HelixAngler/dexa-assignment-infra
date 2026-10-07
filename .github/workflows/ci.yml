@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dir: [identity-service, attendance-service, notification-service, employee-web, hrd-web, infra]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm ci
+        working-directory: sources/${{ matrix.dir }}
+      - name: Lint
+        run: npm run lint
+        working-directory: sources/${{ matrix.dir }}
+
+  unit:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dir: [identity-service, attendance-service, notification-service, employee-web, hrd-web, infra]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm ci
+        working-directory: sources/${{ matrix.dir }}
+      - name: Unit tests
+        run: npm test
+        working-directory: sources/${{ matrix.dir }}
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build and start the stack
+        working-directory: sources/infra
+        run: docker compose up -d --build
+      - name: Wait for services to come up
+        run: sleep 45
+      - name: Install dependencies
+        working-directory: sources/infra
+        run: npm ci
+      - name: Run browser smoke tests
+        working-directory: sources/infra
+        run: npx playwright test
+      - name: Tear the stack down
+        if: always()
+        working-directory: sources/infra
+        run: docker compose down -v
+
+  i18n-parity:
+    if: hashFiles('sources/infra/scripts/check-i18n-keys.ts') != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install employee-web dependencies
+        working-directory: sources/employee-web
+        run: npm ci
+      - name: Check locale key parity
+        run: node sources/infra/scripts/check-i18n-keys.ts
+
+  k6:
+    if: hashFiles('sources/infra/load/punch-summary.js') != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Build and start the stack
+        working-directory: sources/infra
+        run: docker compose up -d --build
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg \
+            --keyserver hkp://keyserver.ubuntu.com:80 \
+            --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D68
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install -y k6
+      - name: Run the load profile
+        run: K6_BASE_URL=http://localhost:80 k6 run sources/infra/load/punch-summary.js
+      - name: Tear the stack down
+        if: always()
+        working-directory: sources/infra
+        run: docker compose down -v

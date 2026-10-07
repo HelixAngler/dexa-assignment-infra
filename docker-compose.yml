@@ -1,0 +1,150 @@
+services:
+  postgres-main:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-wfh}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wfh}
+      POSTGRES_DB: ${POSTGRES_DB_MAIN:-wfh_main}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-main-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  postgres-log:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-wfh}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wfh}
+      POSTGRES_DB: ${POSTGRES_DB_LOG:-wfh_log}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-log-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+
+  redpanda:
+    image: docker.redpanda.com/redpandaandvector/redpanda
+    command: redpanda start --overprovisioned --smp 1 --memory 512M --reserve-memory 0M --node-id 0 --check=false --kafka-addr internal://0.0.0.0:9092 --advertise-kafka-addr internal://redpanda:9092
+    ports:
+      - "9092:9092"
+      - "9644:9644"
+
+  centrifugo:
+    image: centrifugo/centrifugo:v5
+    ports:
+      - "8000:8000"
+
+  identity-service:
+    build:
+      context: ../identity-service
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: "${PORT_IDENTITY:-3001}"
+      DATABASE_URL: "${DATABASE_URL_MAIN:-postgres://wfh:wfh@postgres-main:5432/wfh_main}"
+      REDIS_URL: "${REDIS_URL:-redis://redis:6379}"
+    depends_on:
+      postgres-main:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  attendance-service:
+    build:
+      context: ../attendance-service
+    ports:
+      - "3002:3002"
+    environment:
+      PORT: "${PORT_ATTENDANCE:-3002}"
+      DATABASE_URL: "${DATABASE_URL_MAIN:-postgres://wfh:wfh@postgres-main:5432/wfh_main}"
+      REDIS_URL: "${REDIS_URL:-redis://redis:6379}"
+    depends_on:
+      postgres-main:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  notification-service:
+    build:
+      context: ../notification-service
+    ports:
+      - "3003:3003"
+    environment:
+      PORT: "${PORT_NOTIFICATION:-3003}"
+      DATABASE_URL: "${DATABASE_URL_LOG:-postgres://wfh:wfh@postgres-log:5433/wfh_log}"
+      REDIS_URL: "${REDIS_URL:-redis://redis:6379}"
+      BROKER_BROKERS: "${REDPANDA_BROKERS:-redpanda:9092}"
+      CENTRIFUGO_URL: "${CENTRIFUGO_URL:-http://centrifugo:8000}"
+    depends_on:
+      postgres-log:
+        condition: service_healthy
+      redpanda:
+        condition: service_started
+      centrifugo:
+        condition: service_started
+
+  employee-web:
+    build:
+      context: ../employee-web
+    ports:
+      - "8081:80"
+
+  hrd-web:
+    build:
+      context: ../hrd-web
+    ports:
+      - "8082:80"
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - identity-service
+      - attendance-service
+      - notification-service
+      - employee-web
+      - hrd-web
+
+volumes:
+  postgres-main-data:
+  postgres-log-data:
+  minio-data:
+  caddy-data:
+  caddy-config:
