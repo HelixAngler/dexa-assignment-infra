@@ -39,13 +39,18 @@
 	}
 
 	# HRD console is mounted under the /hrd prefix; paths pass through as-is.
+	# Both SPAs serve plain HTTP inside the compose network (the 8081/8082
+	# numbers in docker-compose.yml are host-side published ports only), so the
+	# upstream port here is 80.
 	handle /hrd* {
-		reverse_proxy hrd-web:8082
+		reverse_proxy hrd-web:80
 	}
 
-	# Employee console catches everything else.
-	handle / {
-		reverse_proxy employee-web:8081
+	# Employee console catches everything else. A matcher-less `handle` is the
+	# catch-all: it fires only when no earlier handle matched, so SPA deep
+	# links such as /absen reach the app too.
+	handle {
+		reverse_proxy employee-web:80
 	}
 }
 

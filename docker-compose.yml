@@ -73,6 +73,7 @@ services:
     environment:
       PORT: "${PORT_IDENTITY:-3001}"
       DATABASE_URL: "${DATABASE_URL_MAIN:-postgres://wfh:wfh@postgres-main:5432/wfh_main}"
+      DATABASE_URL_MAIN: "${DATABASE_URL_MAIN:-postgres://wfh:wfh@postgres-main:5432/wfh_main}"
       REDIS_URL: "${REDIS_URL:-redis://redis:6379}"
     depends_on:
       postgres-main:
@@ -88,6 +89,7 @@ services:
     environment:
       PORT: "${PORT_ATTENDANCE:-3002}"
       DATABASE_URL: "${DATABASE_URL_MAIN:-postgres://wfh:wfh@postgres-main:5432/wfh_main}"
+      DATABASE_URL_MAIN: "${DATABASE_URL_MAIN:-postgres://wfh:wfh@postgres-main:5432/wfh_main}"
       REDIS_URL: "${REDIS_URL:-redis://redis:6379}"
     depends_on:
       postgres-main:
@@ -103,6 +105,7 @@ services:
     environment:
       PORT: "${PORT_NOTIFICATION:-3003}"
       DATABASE_URL: "${DATABASE_URL_LOG:-postgres://wfh:wfh@postgres-log:5433/wfh_log}"
+      DATABASE_URL_LOG: "${DATABASE_URL_LOG:-postgres://wfh:wfh@postgres-log:5433/wfh_log}"
       REDIS_URL: "${REDIS_URL:-redis://redis:6379}"
       BROKER_BROKERS: "${REDPANDA_BROKERS:-redpanda:9092}"
       CENTRIFUGO_URL: "${CENTRIFUGO_URL:-http://centrifugo:8000}"
@@ -129,8 +132,11 @@ services:
   caddy:
     image: caddy:2-alpine
     ports:
-      - "80:80"
-      - "443:443"
+      # Host-side edge ports. Overridable because port 80/443 on a developer
+      # machine may already be taken by another local service; the container
+      # itself always speaks 80/443 and the apps are reached through it.
+      - "${EDGE_HTTP_PORT:-8080}:80"
+      - "${EDGE_HTTPS_PORT:-8443}:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
