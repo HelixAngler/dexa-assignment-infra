@@ -1,0 +1,7 @@
+{
+  "allow_anonymous_connect_without_token": true,
+  "allowed_origins": ["*"],
+  "namespaces": [
+    { "name": "hrd" }
+  ]
+}

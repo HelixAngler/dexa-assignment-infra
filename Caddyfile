@@ -32,7 +32,7 @@
 	# Centrifugo realtime endpoint. WebSockets upgrade automatically inside
 	# reverse_proxy; forwarding the original Host is the Caddy 2 spelling of
 	# the header_upstream Host behavior.
-	handle /realtime* {
+	handle_path /realtime/* {
 		reverse_proxy centrifugo:8000 {
 			header_up Host {host}
 		}

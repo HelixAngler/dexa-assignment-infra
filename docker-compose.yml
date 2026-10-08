@@ -64,6 +64,25 @@ services:
     image: centrifugo/centrifugo:v5
     ports:
       - "8000:8000"
+    environment:
+      # Centrifugo v5 binds its `api_key` setting to CENTRIFUGO_API_KEY; the
+      # short CENTRIFUGO_APIKEY spelling is ignored, which leaves the gateway
+      # without a key and makes it reject every client of its HTTP API.
+      CENTRIFUGO_API_KEY: "${CENTRIFUGO_API_KEY:-change-me}"
+      # Connection JWTs are signed with that same shared value by the
+      # notification service, and the gateway only verifies HS256 tokens when
+      # its own HMAC secret is configured; without it every signed token is
+      # refused as a disabled algorithm and no browser ever connects.
+      CENTRIFUGO_TOKEN_HMAC_SECRET_KEY: "${CENTRIFUGO_API_KEY:-change-me}"
+    volumes:
+      # Structural gateway settings that no single environment value can
+      # express: the alert channel lives in the `hrd` namespace (undeclared
+      # namespaces make the gateway answer "unknown channel"), browser
+      # handshakes arrive without a connection token because the console only
+      # holds a channel-scoped subscription token, and the edge's origin is
+      # whatever host and port this local deployment picked, so every origin
+      # is admitted while access stays gated by that signed token.
+      - ./centrifugo/config.json:/centrifugo/config.json:ro
 
   identity-service:
     build:
@@ -104,11 +123,16 @@ services:
       - "3003:3003"
     environment:
       PORT: "${PORT_NOTIFICATION:-3003}"
-      DATABASE_URL: "${DATABASE_URL_LOG:-postgres://wfh:wfh@postgres-log:5433/wfh_log}"
-      DATABASE_URL_LOG: "${DATABASE_URL_LOG:-postgres://wfh:wfh@postgres-log:5433/wfh_log}"
+      # Inside the compose network the service name resolves to the container,
+      # whose PostgreSQL listens on 5432; the host-published 5433 mapping is
+      # only reachable from the host, never from another container.
+      DATABASE_URL: "${DATABASE_URL_LOG:-postgres://wfh:wfh@postgres-log:5432/wfh_log}"
+      DATABASE_URL_LOG: "${DATABASE_URL_LOG:-postgres://wfh:wfh@postgres-log:5432/wfh_log}"
+      DATABASE_URL_MAIN: "${DATABASE_URL_MAIN:-postgres://wfh:wfh@postgres-main:5432/wfh_main}"
       REDIS_URL: "${REDIS_URL:-redis://redis:6379}"
       BROKER_BROKERS: "${REDPANDA_BROKERS:-redpanda:9092}"
       CENTRIFUGO_URL: "${CENTRIFUGO_URL:-http://centrifugo:8000}"
+      CENTRIFUGO_API_KEY: "${CENTRIFUGO_API_KEY:-change-me}"
     depends_on:
       postgres-log:
         condition: service_healthy

@@ -19,24 +19,36 @@ export default defineConfig({
   },
   projects: [
     {
+      name: 'contract',
+      // Request-only contract suites carry their own single project so they
+      // execute exactly once.
+      testMatch: /contract-.*\.spec\.ts/,
+    },
+    {
+      // A stateful two-context journey owns its own project: it must run
+      // exactly once per invocation, while the viewport projects below would
+      // otherwise replay it once per viewport.
+      name: 'us2-banner',
+      testMatch: /us2-banner\.spec\.ts/,
+      use: {
+        viewport: { width: 1280, height: 720 },
+      },
+    },
+    {
       name: 'desktop',
-      // Viewport projects are for browser specs; the request-only contract
-      // suite has its own single project so it executes exactly once.
-      testIgnore: /contract-.*\.spec\.ts/,
+      // Viewport projects are for browser specs that tolerate every viewport;
+      // the request-only contract suite and the stateful journey are excluded.
+      testIgnore: [/contract-.*\.spec\.ts/, /us2-banner\.spec\.ts/],
       use: {
         viewport: { width: 1280, height: 720 },
       },
     },
     {
       name: 'phone',
-      testIgnore: /contract-.*\.spec\.ts/,
+      testIgnore: [/contract-.*\.spec\.ts/, /us2-banner\.spec\.ts/],
       use: {
         viewport: { width: 360, height: 740 },
       },
-    },
-    {
-      name: 'contract',
-      testMatch: /contract-.*\.spec\.ts/,
     },
   ],
 });
