@@ -19,9 +19,10 @@ import {
  * change must be announced as "password changed" without any password
  * material in the payload.
  *
- * The HRD console ships without a sign-in screen of its own, so its session
- * is created through the identity sign-in endpoint on the context's own
- * cookie jar before the console loads; everything after that is ordinary
+ * The console learns who it is from its own sign-in screen, so the owner
+ * signs in through that form rather than by posting credentials at the edge:
+ * a cookie minted outside the page carries no role, and the shell denies a
+ * session it cannot identify. Everything after the sign-in is ordinary
  * browser traffic.
  */
 
@@ -137,19 +138,9 @@ test('a profile change reaches the open HRD console as a banner', async ({
   let failure: unknown = null;
 
   try {
-    // The console owner signs in first, then opens the console. Both
-    // listeners are armed before the navigation so no early frame or early
-    // response can slip past them.
-    const hrdSignIn = await hrdContext.request.post(
-      `${baseURL}/api/identity/auth/login`,
-      { data: { email: HRD_EMAIL, password: HRD_PASSWORD } },
-    );
-    expect(hrdSignIn.status(), 'the HRD account must sign in').toBe(200);
-    expect(await hrdSignIn.json()).toEqual({
-      role: 'hrd',
-      mustChangePassword: false,
-    });
-
+    // The console owner signs in first, then the console opens. Every
+    // listener is armed before the first navigation so no early frame or
+    // early response can slip past them.
     const hrdPage = await hrdContext.newPage();
     const subscriptionReady = hrdPage
       .waitForEvent('websocket')
@@ -160,8 +151,26 @@ test('a profile change reaches the open HRD console as a banner', async ({
     const recentResponse = hrdPage.waitForResponse((response) =>
       response.url().includes('/api/notification/alerts/recent'),
     );
+    const signInResponse = hrdPage.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' &&
+        response.url().includes('/api/identity/auth/login'),
+    );
 
-    await hrdPage.goto('/hrd/');
+    await hrdPage.goto('/hrd/login');
+    await expect(hrdPage.getByTestId('login')).toBeVisible();
+    await hrdPage.locator('#login-email').fill(HRD_EMAIL);
+    await hrdPage.locator('#login-password').fill(HRD_PASSWORD);
+    await hrdPage.getByTestId('login-submit').click();
+
+    const hrdSignIn = await signInResponse;
+    expect(hrdSignIn.status(), 'the HRD account must sign in').toBe(200);
+    expect(await hrdSignIn.json()).toEqual({
+      role: 'hrd',
+      mustChangePassword: false,
+    });
+    await expect(hrdPage).toHaveURL(/\/hrd\/karyawan$/);
+
     // The banner strip belongs to the console shell, so it exists even
     // before any alert has been queued.
     await expect(hrdPage.getByTestId('banner-region')).toBeAttached();
