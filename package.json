@@ -8,6 +8,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "e2e": "playwright test --config e2e/playwright.config.ts",
     "test": "npm run typecheck",
+    "i18n": "node --experimental-strip-types scripts/check-i18n-keys.ts",
     "db:generate": "prisma generate --schema prisma/main/schema.prisma && prisma generate --schema prisma/log/schema.prisma",
     "db:migrate": "bash scripts/migrate.sh",
     "db:seed": "node --experimental-strip-types scripts/seed.ts"

@@ -3,7 +3,6 @@
 # Certificates come from Caddy's internal CA (`tls internal`), so no account
 # email or public ACME endpoint is involved. Plain HTTP on :80 and HTTPS on
 # :443 both serve the application routes.
-
 {
 	# Keep the :80 listener as a plain application entry point instead of
 	# turning it into an automatic redirect to HTTPS.
@@ -13,6 +12,30 @@
 # Shared routing table. Imported by both listeners so :80 and :443 behave
 # identically; Caddy upgrades WebSockets on its own for reverse_proxy.
 (apps) {
+	# Response hardening headers, applied at the edge so every upstream (the
+	# SPA servers and the JSON APIs alike) answers with them:
+	# - nosniff stops browsers from guessing a content type for a response
+	#   that declares a wrong or missing one.
+	# - SAMEORIGIN keeps other origins from framing these pages (mirrored by
+	#   frame-ancestors in the CSP below).
+	# - strict-origin-when-cross-origin stops full URLs leaking in Referer.
+	# - The CSP allows only same-origin scripts, styles and requests. The
+	#   SPAs load bundled files from their own origin; the realtime socket
+	#   is same-origin; profile photos are served from this origin; photo
+	#   bytes are PUT directly to the object store, whose local host is
+	#   allow-listed in connect-src.
+	# - The upstream `Server` and `X-Powered-By` headers are dropped so
+	#   they cannot advertise the reverse proxy's flavour or the JSON
+	#   frameworks behind it.
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' http://localhost:9000 https://localhost:9000;"
+		-Server
+		-X-Powered-By
+	}
+
 	# NestJS global prefix already includes "api/identity", so the request
 	# path is forwarded unchanged.
 	handle /api/identity/* {
@@ -43,6 +66,13 @@
 	# numbers in docker-compose.yml are host-side published ports only), so the
 	# upstream port here is 80.
 	handle /hrd* {
+		# The bare "/hrd" path must keep the edge's port when it is turned
+		# into a trailing-slash URL. Redirecting here - before the proxy -
+		# answers from the edge itself and the Location header is built from
+		# the Host the client actually used (including its port) instead of
+		# the port-less redirect the upstream directory index would emit.
+		# Exact path match: "/hrd/" and everything below still reach the app.
+		redir /hrd {http.request.scheme}://{http.request.hostport}/hrd/ 302
 		reverse_proxy hrd-web:80
 	}
 
@@ -58,7 +88,15 @@ http://:80 {
 	import apps
 }
 
-:443 {
+# The TLS site is bound to the name "localhost" (not just ":443") so that
+# Caddy has a hostname to issue the internal certificate for; a port-only
+# site has no name to manage and every handshake fails without a leaf cert.
+localhost:443 {
 	tls internal
+	# HSTS belongs on the TLS listener only: advertising it over plain HTTP
+	# would let anyone who can answer that port downgrade future HTTPS use.
+	header {
+		Strict-Transport-Security "max-age=31536000"
+	}
 	import apps
 }

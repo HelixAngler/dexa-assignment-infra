@@ -80,11 +80,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install employee-web dependencies
-        working-directory: sources/employee-web
-        run: npm ci
       - name: Check locale key parity
-        run: node sources/infra/scripts/check-i18n-keys.ts
+        working-directory: sources/infra
+        run: npm run i18n
 
   k6:
     if: hashFiles('sources/infra/load/punch-summary.js') != ''
@@ -111,3 +109,34 @@ jobs:
         if: always()
         working-directory: sources/infra
         run: docker compose down -v
+
+  dependency-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # The npm audit step is the blocking gate: any high or critical advisory
+      # in any submodule fails this job. OSV-Scanner stays advisory (it has no
+      # severity threshold and reports moderate and low findings too, and one
+      # reported advisory, sprintf-js 1.0.3, has no upstream fix), so gating on
+      # it could never go green.
+      - name: npm audit per submodule (high and above)
+        run: |
+          status=0
+          for dir in identity-service attendance-service notification-service employee-web hrd-web infra; do
+            echo "::group::npm audit sources/$dir"
+            (cd "sources/$dir" && npm audit --audit-level=high) || status=1
+            echo "::endgroup::"
+          done
+          exit $status
+      - name: OSV-Scanner (all lockfiles under sources/)
+        uses: google/osv-scanner-action/osv-scanner-action@v2.6.0
+        with:
+          scan-args: |
+            --recursive
+            sources/
+        continue-on-error: true

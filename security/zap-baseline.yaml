@@ -1,0 +1,142 @@
+# ZAP Automation Framework plan: BASELINE security scan (crawl + passive only)
+# of the attendance stack edge at http://localhost:8080.
+#
+# Two plans live in this directory, one per scan mode:
+#   - zap-baseline.yaml -> this plan, writes baseline-report.*
+#   - zap-config.yaml   -> full scan (adds the active scanner), writes
+#                          full-report.*
+# They are separate files because a job's `enabled` flag only accepts a plain
+# YAML boolean - it cannot be switched from an environment variable (the
+# Automation Framework does not substitute variables in that field).
+#
+# HOW TO RUN (from this directory, security/):
+#
+#   Baseline scan:
+#     docker run --rm --network host \
+#       -v "$PWD":/zap/wrk ghcr.io/zaproxy/zaproxy:stable \
+#       zap.sh -cmd -port 56789 -autorun /zap/wrk/zap-baseline.yaml
+#
+#   Full scan:
+#     docker run --rm --network host \
+#       -v "$PWD":/zap/wrk ghcr.io/zaproxy/zaproxy:stable \
+#       zap.sh -cmd -port 56789 -autorun /zap/wrk/zap-config.yaml
+#
+# Why this invocation:
+#   - `--network host` shares the container's network stack with the host, so
+#     the edge published on the host at http://localhost:8080 is reachable
+#     under that exact URL from inside the container. On Docker Desktop /
+#     Rancher Desktop this works and keeps every URL in this file a plain
+#     `localhost:8080`. If host networking is unavailable, drop it, add
+#     `--add-host=host.docker.internal:host-gateway`, and replace every
+#     `localhost:8080` below with `host.docker.internal:8080`.
+#   - `-v "$PWD":/zap/wrk` mounts this directory into the container: the plan
+#     is read from /zap/wrk/zap-baseline.yaml and reports are written to
+#     /zap/wrk/reports, i.e. security/reports/ on the host.
+#   - `-port 56789` is ZAP's own proxy/API port. It must be a free host port:
+#     with host networking, ZAP's default port 8080 would collide with the
+#     edge itself. Pick another free port if 56789 is taken.
+#   - Exit codes: 0 = clean, 1 = a job failed or the final `exitStatus` job
+#     found an alert at High risk or above, 2 = plan warnings.
+
+env:
+  contexts:
+    - name: wfh-edge
+      urls:
+        - http://localhost:8080/
+      includePaths:
+        - http://localhost:8080/.*
+      excludePaths:
+        # Logout endpoints are never in scope: a scan request that hits one
+        # would end the very session later requests depend on.
+        - .*logout.*
+        # The realtime endpoint is a WebSocket upgrade, not a document; a
+        # crawler must not dial or tear one down.
+        - .*realtime.*
+        # Password mutation endpoints stay out of reach so no scan can
+        # change credentials, especially once an authenticated hook is on.
+        - .*auth/password.*
+  parameters:
+    failOnError: true
+    # Keep going after a failed job so reports still get written; the final
+    # exit code then reflects the failure.
+    continueOnFailure: true
+    progressToStdout: true
+
+jobs:
+  # --- Passive scan housekeeping first, so its limits apply from request one -
+  - type: passiveScan-config
+    parameters:
+      enableTags: false
+      maxAlertsPerRule: 20
+
+  # --- Seed the API surface --------------------------------------------------
+  # The SPAs are static shells: nothing in their HTML links to the REST API,
+  # so plain crawling would only ever see files. These requests put the real
+  # endpoints into the sites tree (each answer is also passively scanned).
+  # Only read-only GETs are seeded - none of them mutate state.
+  - type: requestor
+    requests:
+      - name: identity health
+        url: http://localhost:8080/api/identity/health
+      - name: own profile
+        url: http://localhost:8080/api/identity/profile
+      - name: employee list
+        url: http://localhost:8080/api/identity/employees
+      - name: attendance health
+        url: http://localhost:8080/api/attendance/health
+      - name: own punch state
+        url: http://localhost:8080/api/attendance/punches/state
+      - name: own summary
+        url: http://localhost:8080/api/attendance/summary
+      - name: all-attendance view
+        url: http://localhost:8080/api/attendance/attendance
+      - name: notification health
+        url: http://localhost:8080/api/notification/health
+      - name: recent alerts
+        url: http://localhost:8080/api/notification/alerts/recent
+
+  # --- Crawl phase -----------------------------------------------------------
+  # The traditional spider follows server-rendered links quickly; the ajax
+  # spider then drives the SPAs in a headless browser so the client-side
+  # routes and the API calls they trigger land in the sites tree too.
+  - type: spider
+    parameters:
+      context: wfh-edge
+      url: http://localhost:8080/
+      maxDuration: 2
+      maxDepth: 4
+      logoutAvoidance: true
+
+  - type: spiderAjax
+    parameters:
+      context: wfh-edge
+      url: http://localhost:8080/
+      maxDuration: 3
+      maxCrawlDepth: 5
+      numberOfBrowsers: 1
+
+  - type: passiveScan-wait
+    parameters:
+      maxDuration: 2
+
+  # --- Report ----------------------------------------------------------------
+  - type: report
+    parameters:
+      template: traditional-html
+      reportDir: /zap/wrk/reports
+      reportFile: baseline-report.html
+      reportTitle: Baseline security scan - attendance stack edge
+      reportDescription: Crawl plus passive scan of the edge at http://localhost:8080
+
+  - type: report
+    parameters:
+      template: traditional-json
+      reportDir: /zap/wrk/reports
+      reportFile: baseline-report.json
+      reportTitle: Baseline security scan - attendance stack edge
+      reportDescription: Crawl plus passive scan of the edge at http://localhost:8080
+
+  # --- Gate: the run fails while any High-risk alert remains -----------------
+  - type: exitStatus
+    parameters:
+      errorLevel: High
