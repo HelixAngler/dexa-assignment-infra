@@ -12,9 +12,14 @@
     "i18n": "node --experimental-strip-types scripts/check-i18n-keys.ts",
     "db:generate": "prisma generate --schema prisma/main/schema.prisma && prisma generate --schema prisma/log/schema.prisma",
     "db:migrate": "bash scripts/migrate.sh",
-    "db:seed": "node --experimental-strip-types scripts/seed.ts"
+    "db:seed": "node --experimental-strip-types scripts/seed.ts",
+    "design:coverage": "node --experimental-strip-types scripts/design-coverage.ts",
+    "design:tokens-check": "node --experimental-strip-types scripts/design-tokens-check.ts",
+    "design:contrast": "playwright test --config design-qa/playwright.config.ts contrast",
+    "design:layout": "playwright test --config design-qa/playwright.config.ts layout"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@eslint/js": "^9",
     "@playwright/test": "^1.48",
     "@types/node": "^22",

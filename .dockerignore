@@ -1,0 +1,18 @@
+# Dependencies and VCS metadata
+node_modules/
+.git/
+
+# Build output
+dist/
+build/
+
+# Test/coverage artifacts
+coverage/
+test-results/
+playwright-report/
+
+# Logs
+*.log
+
+# Secrets / local environment
+.env*
