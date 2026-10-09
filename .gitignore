@@ -6,3 +6,7 @@ coverage/
 .env
 .env.*
 !.env.example
+
+# Playwright transient artifacts
+test-results/
+playwright-report/

@@ -7,6 +7,7 @@
     "lint": "eslint --config tooling/eslint.config.js tooling e2e scripts load",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "e2e": "playwright test --config e2e/playwright.config.ts",
+    "e2e:smoke": "playwright test --config e2e/playwright.config.ts browser-absen-smoke",
     "test": "npm run typecheck",
     "i18n": "node --experimental-strip-types scripts/check-i18n-keys.ts",
     "db:generate": "prisma generate --schema prisma/main/schema.prisma && prisma generate --schema prisma/log/schema.prisma",
