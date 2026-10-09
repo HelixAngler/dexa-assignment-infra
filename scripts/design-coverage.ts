@@ -1,12 +1,13 @@
 /**
- * Screen-id coverage check for the visual reference and the visual-QA harness.
+ * Screen-id coverage check for the static reference pages and the visual-QA
+ * harness.
  *
  * For every id of the screen inventory the script verifies two things:
- *   - mockup: the design reference index enumerates the id and links it to a
- *     mockup file that exists on disk and carries the id as an element id
+ *   - reference page: the reference index enumerates the id and links it to a
+ *     page file that exists on disk and carries the id as an element id
  *     (state variants are anchors inside their group file, e.g.
  *     `absen.html#emp.absen.conflict`);
- *   - qa entry: at least one spec under the visual-QA harness exercises the
+ *   - qa entry: at least one test under the visual-QA harness exercises the
  *     id — either by naming it in a string literal or by iterating the shared
  *     screen map the harness keeps in design-qa.
  *
@@ -36,10 +37,10 @@ const EXPECTED_ID_COUNT = 23;
 const REFERENCE_DIR = path.join('specs', '002-ui-ux-redesign');
 /** Table holding the authoritative id list. */
 const INVENTORY_FILE = path.join(REFERENCE_DIR, 'contracts', 'screen-inventory.md');
-/** Reference scaffold root; index.html maps every id to its mockup anchor. */
+/** Root of the static reference pages; index.html maps every id to its page anchor. */
 const DESIGN_DIR = path.join(REFERENCE_DIR, 'design');
 const INDEX_FILE = path.join(DESIGN_DIR, 'index.html');
-/** Group directories under the reference root the mockup files live in. */
+/** Subdirectories of the reference root that hold the page files. */
 const MOCKUP_SUBDIRS = ['employee-app', 'hrd-app'];
 /** Spec directory of the visual-QA harness. */
 const QA_SPECS_DIR = path.join('sources', 'infra', 'design-qa', 'specs');
@@ -49,7 +50,7 @@ const SCREEN_MAP_FILE = path.join('sources', 'infra', 'design-qa', 'screens.ts')
 /** Shape an inventory id must have, e.g. `emp.absen.conflict`. */
 const ID_SHAPE = /^(?:emp|hrd)(?:\.[a-z0-9-]+)+$/;
 
-/** One id's two marks plus a reason for a failing mockup mark. */
+/** One id's two marks (reference page, QA entry) plus a reason when the first failed. */
 interface CoverageRow {
   id: string;
   mockup: boolean;
@@ -159,7 +160,7 @@ function collectHtmlFiles(dirs: string[]): string[] {
   return files;
 }
 
-/** Maps each id to the first mockup file that carries it as an element id. */
+/** Maps each id to the first reference page that carries it as an element id. */
 function buildAnchorIndex(designDir: string): Map<string, string> {
   const index = new Map<string, string>();
   const dirs = MOCKUP_SUBDIRS.map((subdir) => path.join(designDir, subdir));
@@ -177,7 +178,7 @@ function buildAnchorIndex(designDir: string): Map<string, string> {
   return index;
 }
 
-/** Checks the design index entry and the mockup file/anchor behind one id. */
+/** Checks the index entry and the page file/anchor behind one id. */
 function checkMockup(
   id: string,
   designDir: string,

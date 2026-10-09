@@ -1,9 +1,9 @@
 /**
- * Design-token parity check between the reference stylesheets of the design
- * reference and both applications.
+ * Design-token parity check: the reference stylesheet and both applications
+ * must declare the same custom properties with the same values.
  *
- * For the three token stylesheets (design reference, employee app, console
- * app) the script verifies that:
+ * For the three token stylesheets (reference, employee app, console app) the
+ * script verifies that:
  *   - all three files exist and parse into custom-property maps,
  *   - the three name → value maps are identical (same names, same values),
  *   - every token the token contract requires is present in all three files,
@@ -22,7 +22,7 @@
  *
  * Usage, from anywhere inside the repository:
  *   npm --prefix sources/infra run design:tokens-check
- *   node --experimental-strip-types sources/infra/scripts/design-tokens-check.ts
+ *   node --experimental-strip-types <this file>
  *
  * Only Node built-ins are used, so no install step is needed.
  */
