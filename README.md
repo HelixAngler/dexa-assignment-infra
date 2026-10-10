@@ -124,16 +124,18 @@ stack. Re-running `migrate.sh` on an already-current database prints
 `No pending migrations to apply` for each schema and still exits `0`. The seed
 prints **every** account it finds in the main database with its password, headed by
 `seed.ts: <n> account(s) present in the main database`. On a freshly seeded database
-`<n>` is `6`; it is larger on a stack that has run the suites, because those leave
+`<n>` is `8`; it is larger on a stack that has run the suites, because those leave
 fixture accounts behind (`us4-crud-*@example.com` from the e2e console journey,
 `outbox-*@example.test` from the notification unit suite) and the seed never deletes
-anything — it only upserts the six rows it owns.
+anything — it only upserts the eight rows it owns.
 
 Seeded logins:
 
 | Email | Role | Status | Password |
 |---|---|---|---|
 | `ivan@company.com` | hrd | active | `HrdAdmin!2026` |
+| `sari@company.com` | hrd | active, must change password | `TempFirst!2026` |
+| `rudi@company.com` | hrd | active, must change password | `TempFirst!2026` |
 | `ada@company.com` | employee | active | `EmployeeDemo!2026` |
 | `bo@company.com` | employee | active | `EmployeeDemo!2026` |
 | `cleo@company.com` | employee | active | `EmployeeDemo!2026` |

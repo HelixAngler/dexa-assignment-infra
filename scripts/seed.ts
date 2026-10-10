@@ -1,7 +1,8 @@
 /**
  * Seeds the main database with the demo accounts used by the local stack:
- * one HRD account and five employees (one issued a temporary password that
- * must be changed at first sign-in, one deactivated).
+ * three HRD accounts (two issued a temporary password that must be changed
+ * at first sign-in) and five employees (one issued a temporary password,
+ * one deactivated).
  *
  * Idempotent: every account is upserted on its unique company email, so a
  * rerun leaves exactly one row per account and never creates duplicates.
@@ -46,6 +47,26 @@ const ACCOUNTS: SeedAccount[] = [
     status: 'active',
     mustChangePassword: false,
     password: HRD_PASSWORD,
+  },
+  {
+    name: 'Sari W.',
+    email: 'sari@company.com',
+    position: 'HR Manager',
+    phone: '+62-817-0000-0007',
+    role: 'hrd',
+    status: 'active',
+    mustChangePassword: true,
+    password: TEMPORARY_PASSWORD,
+  },
+  {
+    name: 'Rudi H.',
+    email: 'rudi@company.com',
+    position: 'HR Staff',
+    phone: '+62-818-0000-0008',
+    role: 'hrd',
+    status: 'active',
+    mustChangePassword: true,
+    password: TEMPORARY_PASSWORD,
   },
   {
     name: 'Ada L.',
@@ -193,9 +214,13 @@ async function main(): Promise<void> {
         `  ${row.email} | role=${row.role} | status=${row.status} | mustChangePassword=${row.mustChangePassword} | password=${password}`,
       );
     }
-    console.log(
-      `seed.ts: ${TEMPORARY_EMAIL} signs in with the temporary password above and must change it at first sign-in.`,
-    );
+    for (const account of ACCOUNTS) {
+      if (account.mustChangePassword) {
+        console.log(
+          `seed.ts: ${account.email} signs in with the temporary password above and must change it at first sign-in.`,
+        );
+      }
+    }
   } finally {
     await prisma.$disconnect();
   }
