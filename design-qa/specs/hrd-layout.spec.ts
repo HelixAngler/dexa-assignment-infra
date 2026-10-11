@@ -157,6 +157,26 @@ async function readEmployeeId(page: Page, want: 'any' | 'active'): Promise<strin
   return (match as RegExpExecArray)[1];
 }
 
+/** Reads one HR account id out of the Akun HR directory. */
+async function readHrId(page: Page): Promise<string> {
+  await page.goto(routeFor('hrd.hr.accounts'));
+  await expect(
+    page
+      .locator('[data-testid="hr-accounts-table"]:visible, [data-testid="hr-accounts-cards"]:visible')
+      .first(),
+    'the HR directory must render its rows',
+  ).toBeVisible();
+  const link = page.locator('a[data-testid="hr-account-edit"]').first();
+  await expect(link, 'the directory must offer an account with an edit link').toHaveAttribute(
+    'href',
+    /\/hr\/[^/]+\/edit$/,
+  );
+  const href = await link.getAttribute('href');
+  const match = href === null ? null : /\/hr\/([^/]+)\/edit$/.exec(href);
+  expect(match, `an edit link must expose its row id, got "${href ?? 'nothing'}"`).not.toBeNull();
+  return (match as RegExpExecArray)[1];
+}
+
 /**
  * Brings one console screen into the state its id names and leaves the page
  * ready for measurement. Throws for ids without a recipe, so a screen added
@@ -182,6 +202,9 @@ async function openScreen(
     }
     case 'hrd.karyawan.list':
     case 'hrd.karyawan.add':
+    case 'hrd.hr.accounts':
+    case 'hrd.hr.add':
+    case 'hrd.hr.approvals':
     case 'hrd.absensi': {
       await signIn(context, HRD_ACCOUNT);
       await page.goto(target.route);
@@ -198,6 +221,12 @@ async function openScreen(
       await signIn(context, HRD_ACCOUNT);
       const employeeId = await readEmployeeId(page, 'any');
       await page.goto(routeFor(id, { id: employeeId }));
+      return;
+    }
+    case 'hrd.hr.edit': {
+      await signIn(context, HRD_ACCOUNT);
+      const hrId = await readHrId(page);
+      await page.goto(routeFor(id, { id: hrId }));
       return;
     }
     case 'hrd.karyawan.deactivate': {
@@ -250,6 +279,19 @@ async function waitForScreenReady(page: Page, id: ScreenId): Promise<void> {
       return;
     case 'hrd.karyawan.deactivate':
       await expect(page.getByTestId('status-confirm')).toBeVisible();
+      return;
+    case 'hrd.hr.accounts':
+      await expect(page.locator('[data-testid="hr-account-row"]:visible, [data-testid="hr-account-card"]:visible').first(), 'the HR directory must render its rows').toBeVisible();
+      return;
+    case 'hrd.hr.add':
+      await expect(page.getByTestId('hr-add')).toBeVisible();
+      return;
+    case 'hrd.hr.edit':
+      await expect(page.getByTestId('hr-edit')).toBeVisible();
+      await expect(page.locator('#hr-edit-name'), 'the edit form must carry the loaded row').not.toHaveValue('');
+      return;
+    case 'hrd.hr.approvals':
+      await expect(page.getByTestId('hr-approvals')).toBeVisible();
       return;
     case 'hrd.absensi':
       await expect(

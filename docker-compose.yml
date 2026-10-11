@@ -103,6 +103,32 @@ services:
       redis:
         condition: service_healthy
 
+  # One-shot first-deploy bootstrap: seeds the initial HRD accounts only when
+  # the database holds zero rows with role='hrd'. Idempotent (re-runs are
+  # no-ops), never restarted; exits 1 on a failed run and 2 when the
+  # BOOTSTRAP_HR_<n>_* variables are missing or incomplete.
+  bootstrap-seeder:
+    build:
+      context: ../identity-service
+    command: ["node", "dist/src/bootstrap/bootstrap.js"]
+    restart: "no"
+    environment:
+      DATABASE_URL: "${DATABASE_URL_MAIN:-postgres://wfh:wfh@postgres-main:5432/wfh_main}"
+      DATABASE_URL_MAIN: "${DATABASE_URL_MAIN:-postgres://wfh:wfh@postgres-main:5432/wfh_main}"
+      BOOTSTRAP_HR_1_EMAIL: "${BOOTSTRAP_HR_1_EMAIL:-}"
+      BOOTSTRAP_HR_1_NAME: "${BOOTSTRAP_HR_1_NAME:-}"
+      BOOTSTRAP_HR_1_POSITION: "${BOOTSTRAP_HR_1_POSITION:-}"
+      BOOTSTRAP_HR_1_PHONE: "${BOOTSTRAP_HR_1_PHONE:-}"
+      BOOTSTRAP_HR_1_INITIAL_PASSWORD: "${BOOTSTRAP_HR_1_INITIAL_PASSWORD:-}"
+      BOOTSTRAP_HR_2_EMAIL: "${BOOTSTRAP_HR_2_EMAIL:-}"
+      BOOTSTRAP_HR_2_NAME: "${BOOTSTRAP_HR_2_NAME:-}"
+      BOOTSTRAP_HR_2_POSITION: "${BOOTSTRAP_HR_2_POSITION:-}"
+      BOOTSTRAP_HR_2_PHONE: "${BOOTSTRAP_HR_2_PHONE:-}"
+      BOOTSTRAP_HR_2_INITIAL_PASSWORD: "${BOOTSTRAP_HR_2_INITIAL_PASSWORD:-}"
+    depends_on:
+      postgres-main:
+        condition: service_healthy
+
   attendance-service:
     build:
       context: ../attendance-service

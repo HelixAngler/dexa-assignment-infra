@@ -1,6 +1,6 @@
 /**
  * Screen map for the visual-QA harness: one entry per screen id of the
- * visual inventory (23 ids — 13 employee, 10 console). Spec files import this
+ * visual inventory (25 ids — 13 employee, 12 console). Spec files import this
  * module instead of hardcoding paths, so a route rename lands in exactly one
  * place and every capture knows how much set-up its screen needs.
  *
@@ -52,7 +52,7 @@ export interface ScreenTarget {
   reachHint: string;
 }
 
-/** All 23 screen ids, in inventory order. */
+/** All 25 screen ids, in inventory order. */
 export const screenIds = [
   'emp.login',
   'emp.login.locked',
@@ -72,6 +72,10 @@ export const screenIds = [
   'hrd.karyawan.add',
   'hrd.karyawan.edit',
   'hrd.karyawan.deactivate',
+  'hrd.hr.accounts',
+  'hrd.hr.add',
+  'hrd.hr.edit',
+  'hrd.hr.approvals',
   'hrd.absensi',
   'hrd.absensi.empty',
   'hrd.banner.single',
@@ -211,6 +215,34 @@ export const screens: Readonly<Record<ScreenId, ScreenTarget>> = {
     reach: 'fixture',
     reachHint:
       'Same id as hrd.karyawan.edit, then open the deactivate confirmation (the danger action) so its attention copy is on screen — open only, never confirm it.',
+  },
+  'hrd.hr.accounts': {
+    app: 'hrd',
+    route: '/hrd/hr',
+    reach: 'session',
+    reachHint:
+      'Console session; open the route. The HR directory renders every role=hrd account (table on wide screens, cards on phones); each row links into its edit page.',
+  },
+  'hrd.hr.add': {
+    app: 'hrd',
+    route: '/hrd/hr/add',
+    reach: 'session',
+    reachHint:
+      'Console session; open the route (or the "Tambah" button on the directory). The proposal form renders as-is; the pending notice only appears after a submit.',
+  },
+  'hrd.hr.edit': {
+    app: 'hrd',
+    route: '/hrd/hr/:id/edit',
+    reach: 'fixture',
+    reachHint:
+      'Console session plus an HR account id: read one from the directory (the "Ubah" link on /hrd/hr) and open its edit page — profile form, status card and password card render as-is.',
+  },
+  'hrd.hr.approvals': {
+    app: 'hrd',
+    route: '/hrd/approvals',
+    reach: 'session',
+    reachHint:
+      'Console session; open the route. The decide-only proposals table renders as-is; the confirm modal is only visible after pressing a decision button.',
   },
   'hrd.absensi': {
     app: 'hrd',

@@ -16,7 +16,7 @@
  * instead of silently tolerated.
  *
  * Output: a per-id table with both check columns, then the missing ids with a
- * reason each, then the summary line `NN/23 screen ids covered`. Exits 0 only
+ * reason each, then the summary line `NN/27 screen ids covered`. Exits 0 only
  * when every id has both marks; otherwise it exits 1.
  *
  * Usage, from anywhere inside the repository:
@@ -31,8 +31,8 @@ import path from 'node:path';
 /** Prefix for every diagnostic line this script prints. */
 const SCRIPT = 'design-coverage.ts';
 
-/** The inventory enumerates this many ids: 13 employee + 10 console. */
-const EXPECTED_ID_COUNT = 23;
+/** The inventory enumerates this many ids: 13 employee + 14 console. */
+const EXPECTED_ID_COUNT = 27;
 
 const REFERENCE_DIR = path.join('specs', '002-ui-ux-redesign');
 /** Table holding the authoritative id list. */

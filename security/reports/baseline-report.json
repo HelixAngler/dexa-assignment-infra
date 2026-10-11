@@ -1,8 +1,8 @@
 {
 	"@programName": "ZAP",
 	"@version": "2.17.0",
-	"@generated": "Thu, 8 Oct 2026 15:47:07",
-	"created": "2026-10-08T15:47:07.598251095Z",
+	"@generated": "Sun, 11 Oct 2026 03:45:53",
+	"created": "2026-10-11T03:45:53.958106197Z",
 	"insights":[
 		{
 			"level": "Low",
@@ -10,7 +10,7 @@
 			"site": "",
 			"key": "insight.log.warn",
 			"description": "ZAP warnings logged - see the zap.log file for details",
-			"statistic": "2"
+			"statistic": "1"
 		},
 		{
 			"level": "Info",
@@ -101,7 +101,7 @@
 							"method": "GET",
 							"param": "",
 							"attack": "",
-							"evidence": "<script type=\"module\" crossorigin src=\"/assets/index-8WWcRAGk.js\"></script>",
+							"evidence": "<script type=\"module\" crossorigin src=\"/assets/index-DaH92wSs.js\"></script>",
 							"otherinfo": "No links have been found while there are scripts, which is an indication that this is a modern web application."
 						},
 						{
@@ -111,27 +111,27 @@
 							"method": "GET",
 							"param": "",
 							"attack": "",
-							"evidence": "<script type=\"module\" crossorigin src=\"/assets/index-8WWcRAGk.js\"></script>",
+							"evidence": "<script type=\"module\" crossorigin src=\"/assets/index-DaH92wSs.js\"></script>",
 							"otherinfo": "No links have been found while there are scripts, which is an indication that this is a modern web application."
 						},
 						{
-							"id": "4",
+							"id": "1",
 							"uri": "http://localhost:8080/robots.txt",
 							"nodeName": "http:\/\/localhost:8080\/robots.txt",
 							"method": "GET",
 							"param": "",
 							"attack": "",
-							"evidence": "<script type=\"module\" crossorigin src=\"/assets/index-8WWcRAGk.js\"></script>",
+							"evidence": "<script type=\"module\" crossorigin src=\"/assets/index-DaH92wSs.js\"></script>",
 							"otherinfo": "No links have been found while there are scripts, which is an indication that this is a modern web application."
 						},
 						{
-							"id": "0",
+							"id": "4",
 							"uri": "http://localhost:8080/sitemap.xml",
 							"nodeName": "http:\/\/localhost:8080\/sitemap.xml",
 							"method": "GET",
 							"param": "",
 							"attack": "",
-							"evidence": "<script type=\"module\" crossorigin src=\"/assets/index-8WWcRAGk.js\"></script>",
+							"evidence": "<script type=\"module\" crossorigin src=\"/assets/index-DaH92wSs.js\"></script>",
 							"otherinfo": "No links have been found while there are scripts, which is an indication that this is a modern web application."
 						}
 					],
@@ -142,7 +142,7 @@
 					"reference": "",
 					"cweid": "-1",
 					"wascid": "-1",
-					"sourceid": "29"
+					"sourceid": "31"
 				}
 			]
 		}

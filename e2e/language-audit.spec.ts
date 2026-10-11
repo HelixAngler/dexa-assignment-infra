@@ -783,10 +783,19 @@ test('every console screen switches language in place and keeps its session', as
 
     // The record this run just created is the one opened for editing, so the
     // audit reads its own row and no seeded account is ever opened for change.
+    // It must be an ordinary employee: an HR account's edit screen is the
+    // approval-flow notice by design and carries no status or reset actions.
+    const editTargetEmail = `lang-audit-staff-${crypto.randomUUID().slice(0, 12)}@example.com`;
+    const editTargetId = await provisionAccount({
+      name: 'Lang Audit Staff',
+      email: editTargetEmail,
+      role: 'employee',
+      phone: '+62-817-0000-0009',
+    });
     const editLoad = page.waitForResponse((response) =>
       response.url().endsWith('/api/identity/employees'),
     );
-    await page.goto(`/hrd/karyawan/${employeeId}/edit`);
+    await page.goto(`/hrd/karyawan/${editTargetId}/edit`);
     await editLoad;
     await expect(page.getByTestId('status-apply')).toBeVisible();
     await auditScreen(

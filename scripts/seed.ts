@@ -69,6 +69,16 @@ const ACCOUNTS: SeedAccount[] = [
     password: TEMPORARY_PASSWORD,
   },
   {
+    name: 'Chandra P.',
+    email: 'hr-checker@e2e.test',
+    position: 'Compliance Officer',
+    phone: '+62-819-0000-0009',
+    role: 'hrd',
+    status: 'active',
+    mustChangePassword: false,
+    password: HRD_PASSWORD,
+  },
+  {
     name: 'Ada L.',
     email: 'ada@company.com',
     position: 'Backend Engineer',

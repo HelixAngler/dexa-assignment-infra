@@ -35,17 +35,33 @@ export default defineConfig({
       },
     },
     {
+      // Stateful maker-checker journey: exactly once per run.
+      name: 'hr-access',
+      testMatch: /hr-access\.approval\.spec\.ts/,
+      use: {
+        viewport: { width: 1280, height: 720 },
+      },
+    },
+    {
       name: 'desktop',
       // Viewport projects are for browser specs that tolerate every viewport;
-      // the request-only contract suite and the stateful journey are excluded.
-      testIgnore: [/contract-.*\.spec\.ts/, /us2-banner\.spec\.ts/],
+      // the request-only contract suite and the stateful journeys are excluded.
+      testIgnore: [
+        /contract-.*\.spec\.ts/,
+        /us2-banner\.spec\.ts/,
+        /hr-access\.approval\.spec\.ts/,
+      ],
       use: {
         viewport: { width: 1280, height: 720 },
       },
     },
     {
       name: 'phone',
-      testIgnore: [/contract-.*\.spec\.ts/, /us2-banner\.spec\.ts/],
+      testIgnore: [
+        /contract-.*\.spec\.ts/,
+        /us2-banner\.spec\.ts/,
+        /hr-access\.approval\.spec\.ts/,
+      ],
       use: {
         viewport: { width: 360, height: 740 },
       },

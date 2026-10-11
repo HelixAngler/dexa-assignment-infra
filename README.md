@@ -124,10 +124,10 @@ stack. Re-running `migrate.sh` on an already-current database prints
 `No pending migrations to apply` for each schema and still exits `0`. The seed
 prints **every** account it finds in the main database with its password, headed by
 `seed.ts: <n> account(s) present in the main database`. On a freshly seeded database
-`<n>` is `8`; it is larger on a stack that has run the suites, because those leave
+`<n>` is `9`; it is larger on a stack that has run the suites, because those leave
 fixture accounts behind (`us4-crud-*@example.com` from the e2e console journey,
 `outbox-*@example.test` from the notification unit suite) and the seed never deletes
-anything — it only upserts the eight rows it owns.
+anything — it only upserts the nine rows it owns.
 
 Seeded logins:
 
@@ -136,11 +136,41 @@ Seeded logins:
 | `ivan@company.com` | hrd | active | `HrdAdmin!2026` |
 | `sari@company.com` | hrd | active, must change password | `TempFirst!2026` |
 | `rudi@company.com` | hrd | active, must change password | `TempFirst!2026` |
+| `hr-checker@e2e.test` | hrd | active | `HrdAdmin!2026` |
 | `ada@company.com` | employee | active | `EmployeeDemo!2026` |
 | `bo@company.com` | employee | active | `EmployeeDemo!2026` |
 | `cleo@company.com` | employee | active | `EmployeeDemo!2026` |
 | `dan@company.com` | employee | deactivated | `EmployeeDemo!2026` |
 | `eka@company.com` | employee | active, must change password | `TempFirst!2026` |
+
+### First-deploy HR bootstrap (`bootstrap-seeder`)
+
+A brand-new deployment has no HRD account, so nobody could approve anything. The
+one-shot `bootstrap-seeder` compose service (same identity image,
+`command: ["node", "dist/src/bootstrap/bootstrap.js"]`, `restart: "no"`) seeds the
+initial HR accounts **only when the main database holds zero `role='hrd'` rows** —
+the guard runs before any config validation, so on every stack that already has HR
+accounts (like this one) it is a harmless no-op that never reads the config.
+
+```bash
+docker compose run --rm bootstrap-seeder   # also runs once automatically on `up -d`
+```
+
+Configuration is indexed env — contiguous `BOOTSTRAP_HR_<n>_{EMAIL,NAME,POSITION,
+PHONE,INITIAL_PASSWORD}` groups starting at `1` (`.env.example` carries two base
+accounts). Behaviour:
+
+| Situation | Result |
+|---|---|
+| ≥1 `hrd` row exists | log `skipped — N HR account(s) already exist`, exit `0`, config not consulted |
+| empty DB, config complete | creates each account (`active`, `role=hrd`, forced password change), exit `0`, initial password never logged |
+| empty DB, config incomplete/malformed | actionable error, **no rows created**, exit `2` |
+| schema not migrated yet | actionable error, exit `2` — run `scripts/migrate.sh`, then re-run the seeder |
+| create fails mid-way | transaction rollback, exit `1` |
+
+Created accounts land in `mustChangePassword`, so the configured initial password
+works exactly once at first login. See `specs/003-hr-bootstrap-approval/quickstart.md`
+Stage A for the full isolated validation.
 
 ## 5. Validate
 
